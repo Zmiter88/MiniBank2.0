@@ -1,6 +1,6 @@
 package com.example.minibank2.controller;
 
-import com.example.minibank2.model.Account;
+import com.example.minibank2.entity.Account;
 import com.example.minibank2.service.AccountService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,8 +31,10 @@ public class AccountController {
     // GET /accounts → zwraca wszystkie konta
     @GetMapping
     public ResponseEntity<List<Account>> getAllAccounts() {
-        List<Account> allAccounts = accountService.getAllAccounts();
-        return ResponseEntity.ok(allAccounts);
+        List<Account> foundAccounts = accountService.getAllAccounts();
+        return foundAccounts.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(foundAccounts);
     }
 
     // POST /accounts → tworzy nowe konto

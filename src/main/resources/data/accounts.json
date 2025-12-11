@@ -1,0 +1,52 @@
+[
+  {
+    "owner": "Alicja Kowalska",
+    "number": "PL001",
+    "currency": "PLN",
+    "balance": 5200.50,
+    "status": "ACTIVE",
+    "accountType": "SAVINGS",
+    "interestRate": 1.5,
+    "createdAt": "2025-01-01"
+  },
+  {
+    "owner": "Jan Nowak",
+    "number": "PL002",
+    "currency": "PLN",
+    "balance": 200.00,
+    "status": "BLOCKED",
+    "accountType": "CHECKING",
+    "interestRate": 0.0,
+    "createdAt": "2025-02-01"
+  },
+  {
+    "owner": "Maria Wiśniewska",
+    "number": "PL003",
+    "currency": "USD",
+    "balance": 12500.00,
+    "status": "ACTIVE",
+    "accountType": "SAVINGS",
+    "interestRate": 1.2,
+    "createdAt": "2025-03-01"
+  },
+  {
+    "owner": "Tomasz Zieliński",
+    "number": "PL004",
+    "currency": "EUR",
+    "balance": 3400.00,
+    "status": "ACTIVE",
+    "accountType": "CHECKING",
+    "interestRate": 0.0,
+    "createdAt": "2025-04-01"
+  },
+  {
+    "owner": "Barbara Sawicka",
+    "number": "PL005",
+    "currency": "PLN",
+    "balance": 4800.00,
+    "status": "ACTIVE",
+    "accountType": "SAVINGS",
+    "interestRate": 1.4,
+    "createdAt": "2025-05-01"
+  }
+]

@@ -1,4 +1,4 @@
-package com.example.minibank2.model;
+package com.example.minibank2.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
