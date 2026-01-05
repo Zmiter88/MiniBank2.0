@@ -1,8 +1,18 @@
 package com.example.minibank2.service;
 
+import com.example.minibank2.dto.AccountResponse;
+import com.example.minibank2.dto.CreateAccountRequest;
+import com.example.minibank2.dto.CreateAccountResponse;
+import com.example.minibank2.dto.UpdateAccountRequest;
 import com.example.minibank2.entity.Account;
+import com.example.minibank2.entity.AccountType;
+import com.example.minibank2.exception.AccountNotFoundException;
+import com.example.minibank2.exception.InsufficientFundsException;
+import com.example.minibank2.exception.TransferToSameAccountException;
+import com.example.minibank2.exception.InvalidAmountException;
+import com.example.minibank2.mapper.AccountMapper;
 import com.example.minibank2.repository.AccountRepository;
-import com.example.minibank2.repository.TransactionRepository;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -11,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
  * AccountService to warstwa logiki biznesowej dla kont bankowych.
@@ -22,162 +31,183 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final TransactionService transactionService;
+    private final NumberGeneratorService numberGeneratorService;
+    private final AccountMapper accountMapper;
     private static final Logger logger = LoggerFactory.getLogger(AccountService.class);
 
-
-    // Konstruktor z wstrzykiwaniem repozytorium (Dependency Injection)
-    public AccountService(AccountRepository accountRepository, TransactionService transactionService) {
+    // Konstruktor z wstrzykiwaniem zależności
+    public AccountService(AccountRepository accountRepository,
+                          TransactionService transactionService,
+                          NumberGeneratorService numberGeneratorService,
+                          AccountMapper accountMapper) {
         this.accountRepository = accountRepository;
         this.transactionService = transactionService;
+        this.numberGeneratorService = numberGeneratorService;
+        this.accountMapper = accountMapper;
     }
 
-    // Zwraca listę wszystkich kont
-    public List<Account> getAllAccounts() {
-        return accountRepository.findAll();
+    // 🔹 Metoda pomocnicza do pobrania konta lub rzucenia wyjątku
+    private Account getAccountOrThrow(Long accountId) {
+        return accountRepository.findById(accountId)
+                .orElseThrow(() -> new AccountNotFoundException("Account not found with id " + accountId));
     }
 
-    // Tworzy nowe konto i zapisuje je w bazie
-    public Account createAccount(Account account) {
-        return accountRepository.save(account);
-    }
-
-    // Metoda do aktualizowania konta (tylko wybrane pola, te które użytkownik w realnym świecie może sam zmienić)
-    public Account updateAccount(Long id, Account updateAccount) {
-        // szukamy konta o podanym id w bazie
-        Account existingAccount = accountRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Account not found with id " + id));
-        // aktualizujemy tylko wybrane pola
-        existingAccount.setOwner(updateAccount.getOwner());
-        existingAccount.setBalance(updateAccount.getBalance());
-        existingAccount.setStatus(updateAccount.getStatus());
-
-        // zapisujemy zmiany do bazy
-        return accountRepository.save(existingAccount);
-    }
-
-    // Metoda do usuwania konta
-    public Account deleteAccount(Long id) {
-        Account existingAccount = accountRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Account not found with id " + id));
-        accountRepository.delete(existingAccount);
-        logger.info("Account with id {} has been deleted", id);
-        return existingAccount;
-    }
-
-    // Metoda do szukania konta po id
-    public Account findAccountById(Long id) {
-        Account existingAccount = accountRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Account not found with id " + id));
-        return existingAccount;
-    }
-
-    // Metoda do pobierania kont na podstawie właściciela
-    public List<Account> findAccountsByOwner(String owner) {
-        List<Account> accountsByOwner = accountRepository.findByOwner(owner);
-        if (accountsByOwner.isEmpty()) {
-            throw new NoSuchElementException("No accounts for owner: " + owner);
-        }
-        return accountsByOwner;
-    }
-
-    // Metoda do pobrania konta z najwyższym saldem przy pomocy stream
-    public Account getAccountWithMaxBalanceStream() {
+    // 🔹 Zwraca listę wszystkich kont
+    public List<AccountResponse> getAllAccounts() {
         return accountRepository.findAll().stream()
-                .max(Comparator.comparing(Account::getBalance))
-                .orElseThrow(() -> new NoSuchElementException("No accounts in database"));
-    }
-    // Metoda do pobrania konta z najwyższym saldem przy pomocy Spring
-    public Account getAccountWithMaxBalanceSpring() {
-        return accountRepository.findTopByOrderByBalanceDesc()
-                .orElseThrow(() -> new NoSuchElementException("No accounts in database"));
+                .map(accountMapper::toAccountResponse)
+                .toList();
     }
 
-    // Metoda do znajdywania konta o saldzie wiekszym niż podanym z palca
-    public List<Account> getAccountsWithBalanceGreaterThan(BigDecimal amount) {
-        List<Account> accounts =  accountRepository.findByBalanceGreaterThan(amount);
-        if(accounts.isEmpty()) {
-            throw new NoSuchElementException("No accounts found with balance greater than " + amount);
+    // 🔹 Tworzy nowe konto i zapisuje je w bazie
+    public CreateAccountResponse createAccount(CreateAccountRequest request) {
+        Account account = new Account();
+        account.setOwner(request.getOwner());
+        account.setCurrency(request.getCurrency());
+        account.setAccountType(request.getAccountType());
+        account.setCreatedAt(LocalDate.now());
+        account.setNumber(numberGeneratorService.generateAccountNumber());
+        account.setStatus("ACTIVE");
+        account.setBalance(BigDecimal.ZERO);
+        account.setInterestRate(request.getAccountType() == AccountType.SAVINGS ? new BigDecimal("0.02") : BigDecimal.ZERO);
+
+        Account savedAccount = accountRepository.save(account);
+        return accountMapper.toCreateAccountResponse(savedAccount);
+    }
+
+    // 🔹 Aktualizacja konta (tylko wybrane pola)
+    public AccountResponse updateAccount(Long id, UpdateAccountRequest request) {
+        Account account = getAccountOrThrow(id);
+        account.setOwner(request.getOwner());
+        Account updatedAccount = accountRepository.save(account);
+        return accountMapper.toAccountResponse(updatedAccount);
+    }
+
+    // 🔹 Usuwanie konta
+    public AccountResponse deleteAccount(Long id) {
+        Account account = getAccountOrThrow(id);
+        accountRepository.delete(account);
+        logger.info("Account with id {} has been deleted", id);
+        return accountMapper.toAccountResponse(account);
+    }
+
+    // 🔹 Pobranie konta po id
+    public AccountResponse findAccountById(Long id) {
+        return accountMapper.toAccountResponse(getAccountOrThrow(id));
+    }
+
+    // 🔹 Pobranie kont dla właściciela
+    public List<AccountResponse> findAccountsByOwner(String owner) {
+        List<Account> accounts = accountRepository.findByOwner(owner);
+        if (accounts.isEmpty()) {
+            throw new AccountNotFoundException("No accounts for owner: " + owner);
         }
-        return accounts;
+        return accounts.stream().map(accountMapper::toAccountResponse).toList();
     }
 
-    // Metoda do znalezienie kont utworzonych po dacie
-    public List<Account> getAccountsCreatedAfterDate(LocalDate date) {
+    // 🔹 Konto z najwyższym saldem (Spring)
+    public AccountResponse getAccountWithMaxBalanceSpring() {
+        Account account = accountRepository.findTopByOrderByBalanceDesc()
+                .orElseThrow(() -> new AccountNotFoundException("No accounts in database"));
+        return accountMapper.toAccountResponse(account);
+    }
+
+    // 🔹 Znajdowanie konta z saldem większym niż podane
+    public List<AccountResponse> getAccountsWithBalanceGreaterThan(BigDecimal amount) {
+        List<Account> accounts = accountRepository.findByBalanceGreaterThan(amount);
+        if (accounts.isEmpty()) {
+            throw new AccountNotFoundException("No accounts found with balance greater than " + amount);
+        }
+        return accounts.stream().map(accountMapper::toAccountResponse).toList();
+    }
+
+    // 🔹 Znalezienie kont utworzonych po dacie
+    public List<AccountResponse> getAccountsCreatedAfterDate(LocalDate date) {
         List<Account> accounts = accountRepository.findByCreatedAtAfter(date);
         if (accounts.isEmpty()) {
-            throw new NoSuchElementException("No accounts found after " + date);
+            throw new AccountNotFoundException("No accounts found after " + date);
         }
-        return accounts;
+        return accounts.stream().map(accountMapper::toAccountResponse).toList();
     }
 
-    // Metoda do znalezienia pierwsze konto (najstarsze) po dacie utworzenia (createdAt)
-    public Account getTheOldestAccount() {
-        return accountRepository.findTopByOrderByCreatedAtAsc()
-                .orElseThrow(() -> new NoSuchElementException("No accounts found"));
+    // 🔹 Najstarsze konto
+    public AccountResponse getTheOldestAccount() {
+        Account account = accountRepository.findTopByOrderByCreatedAtAsc()
+                .orElseThrow(() -> new AccountNotFoundException("No accounts found"));
+        return accountMapper.toAccountResponse(account);
     }
 
-    // Metoda do policzneia, ile jest kont w danej walucie (currency)
+    // 🔹 Liczba kont w danej walucie
     public Long getHowManyAccountWithCurrency(String currency) {
         return accountRepository.countByCurrency(currency);
     }
 
-    // Metoda do znalezienia pierwszego konta, które ma status „ACTIVE”, posortowane malejąco po saldzie
-    public Account firstActiveAccountOrderByBalanceDesc(String status) {
-        return accountRepository.findTopByStatusOrderByBalanceDesc(status)
-                .orElseThrow(() -> new NoSuchElementException("No account found with status " + status));
+    // 🔹 Pierwsze konto z aktywnym statusem posortowane malejąco po saldzie
+    public AccountResponse firstActiveAccountOrderByBalanceDesc(String status) {
+        Account account = accountRepository.findTopByStatusOrderByBalanceDesc(status)
+                .orElseThrow(() -> new AccountNotFoundException("No account found with status " + status));
+        return accountMapper.toAccountResponse(account);
     }
 
-    // Metoda do znajdywania wszystkich kont utworzone przed
-    public List<Account> accountsCreatedBefore(LocalDate date) {
+    // 🔹 Konta utworzone przed określoną datą
+    public List<AccountResponse> accountsCreatedBefore(LocalDate date) {
         List<Account> accounts = accountRepository.findAllByCreatedAtBefore(date);
         if (accounts.isEmpty()) {
-            throw new NoSuchElementException("No accounts found before " + date);
+            throw new AccountNotFoundException("No accounts found before " + date);
         }
-        return accounts;
+        return accounts.stream().map(accountMapper::toAccountResponse).toList();
     }
 
-    // Metoda znajdź konto o najwyższym saldzie w danej walucie
-    public Account accountWithHighestBalanceIn(String currency) {
-        return accountRepository.findTopByCurrencyOrderByBalanceDesc(currency)
-                .orElseThrow(() -> new NoSuchElementException("No account found"));
+    // 🔹 Konto z najwyższym saldem w danej walucie
+    public AccountResponse accountWithHighestBalanceIn(String currency) {
+        Account account = accountRepository.findTopByCurrencyOrderByBalanceDesc(currency)
+                .orElseThrow(() -> new AccountNotFoundException("No account found"));
+        return accountMapper.toAccountResponse(account);
     }
 
-    // Metoda do znajdywania 3 kont z najwyższym saldem
-    public List<Account> top3HighestBalanceAccounts() {
+    // 🔹 Top 3 kont z najwyższym saldem
+    public List<AccountResponse> top3HighestBalanceAccounts() {
         List<Account> accounts = accountRepository.findTop3ByOrderByBalanceDesc();
         if (accounts.isEmpty()) {
-            throw new NoSuchElementException("No accounts found in database");
+            throw new AccountNotFoundException("No accounts found in database");
         }
-        return accounts;
+        return accounts.stream().map(accountMapper::toAccountResponse).toList();
     }
 
-    // Metoda wykonująca przelew między kontami
+    // 🔹 Wykonanie przelewu między kontami
+    @Transactional
     public void transfer(Long senderId, Long receiverId, BigDecimal amount) {
-
-        // Walidacja: przelew na własne konto
         if (senderId.equals(receiverId)) {
-            throw new IllegalStateException("Nie można wykonać przelewu na to samo konto.");
+            throw new TransferToSameAccountException("Nie można wykonać przelewu na to samo konto.");
         }
-        // pobranie kont
-        Account sender = accountRepository.findById(senderId).orElseThrow(() -> new IllegalArgumentException("Nie znaleziono konta nadawcy"));
-        Account receiver = accountRepository.findById(receiverId).orElseThrow(() -> new IllegalArgumentException("Nie znaleziono konta odbiorcy"));
 
+        Account sender = getAccountOrThrow(senderId);
+        Account receiver = getAccountOrThrow(receiverId);
 
-        // Walidacja: nadawca ma wystarczające środki
-        if (sender.getBalance().compareTo(amount) < 0) {
-            throw new IllegalStateException("Nie wystarczające środki na koncie nadawcy");
-        }
-        // zmiana sald kont
-        sender.setBalance(sender.getBalance().subtract(amount));
-        receiver.setBalance(receiver.getBalance().add(amount));
+        sender.withdraw(amount);
+        receiver.deposit(amount);
 
-        // zapis zmian w bazie
         accountRepository.save(sender);
         accountRepository.save(receiver);
 
-        // zapis transakcji w historii
         transactionService.recordTransfer(sender, receiver, amount);
     }
-
+    // Metoda do wpłaty kasy na konto
+    @Transactional
+    public AccountResponse deposit(Long accountId, BigDecimal amount) {
+        Account account = getAccountOrThrow(accountId);
+        account.deposit(amount);
+        accountRepository.save(account);
+        transactionService.recordDeposit(account, amount);
+        return accountMapper.toAccountResponse(account);
+    }
+    // Metoda do wypłaty kasy z konta
+    @Transactional
+    public AccountResponse withdraw(Long accountId, BigDecimal amount) {
+        Account account = getAccountOrThrow(accountId);
+        account.withdraw(amount);
+        accountRepository.save(account);
+        transactionService.recordWithdraw(account, amount);
+        return accountMapper.toAccountResponse(account);
+    }
 }
-

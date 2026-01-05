@@ -1,22 +1,21 @@
 package com.example.minibank2.controller;
 
-import com.example.minibank2.entity.Account;
+import com.example.minibank2.dto.*;
 import com.example.minibank2.service.AccountService;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
  * AccountController obsługuje REST API dla kont bankowych.
  * Przyjmuje żądania HTTP i wywołuje odpowiednie metody serwisu.
  */
 @RestController
-@RequestMapping("/accounts") // ścieżka bazowa dla wszystkich endpointów
+@RequestMapping("/accounts")
 public class AccountController {
 
     private final AccountService accountService;
@@ -26,165 +25,122 @@ public class AccountController {
         this.accountService = accountService;
     }
 
-    // Działamy na klasie ResponseEntity, ponieważ pozwala zwrócić zarówno dane, jak i dodatkowe informacje HTTP do klienta.
-
-    // GET /accounts → zwraca wszystkie konta
+    // 🔹 GET /accounts → zwraca wszystkie konta
     @GetMapping
-    public ResponseEntity<List<Account>> getAllAccounts() {
-        List<Account> foundAccounts = accountService.getAllAccounts();
-        return foundAccounts.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(foundAccounts);
+    public ResponseEntity<List<AccountResponse>> getAllAccounts() {
+        List<AccountResponse> foundAccounts = accountService.getAllAccounts();
+        return foundAccounts.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(foundAccounts);
     }
 
-    // POST /accounts → tworzy nowe konto
+    // 🔹 POST /accounts → tworzy nowe konto
     @PostMapping
-    public ResponseEntity<Account> createAccount(@RequestBody Account account) {
-        Account createdAccount = accountService.createAccount(account);
-        return ResponseEntity.ok(createdAccount); // 200 OK + utworzone konto
+    public ResponseEntity<CreateAccountResponse> createAccount(@RequestBody @Valid CreateAccountRequest request) {
+        return ResponseEntity.ok(accountService.createAccount(request));
     }
 
-    // Metoda PUT aktualizujaca konto
+    // 🔹 PUT /accounts/{id} → aktualizacja konta
     @PutMapping("/{id}")
-    public ResponseEntity<Account> updateAccount(@PathVariable Long id, @RequestBody Account updateAccount) {
-        try {
-            Account updated = accountService.updateAccount(id, updateAccount);
-            return ResponseEntity.ok(updated);  // 200 OK + zaktualizowane konto
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();  // 404 Not Found
-        }
+    public ResponseEntity<AccountResponse> updateAccount(@PathVariable Long id, @RequestBody @Valid UpdateAccountRequest request) {
+        return ResponseEntity.ok(accountService.updateAccount(id, request));
     }
 
-    // Metoda DELETE do usuwania konta zwracajaca obiekt
+    // 🔹 DELETE /accounts/{id} → usunięcie konta
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteAccount(@PathVariable Long id) {
-        try {
-            accountService.deleteAccount(id);
-            return ResponseEntity.ok("Account with id " + id + " deleted successfully");
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Account with id " + id + " not found");
-        }
+    public ResponseEntity<AccountResponse> deleteAccount(@PathVariable Long id) {
+        return ResponseEntity.ok(accountService.deleteAccount(id));
     }
 
-    // Metoda GET do szukania konta po id
+    // 🔹 GET /accounts/{id} → pobranie konta po id
     @GetMapping("/{id}")
-    public ResponseEntity<Account> findAccountById(@PathVariable Long id) {
-        try {
-            Account foundAccount = accountService.findAccountById(id);
-            return ResponseEntity.ok(foundAccount);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<AccountResponse> findAccountById(@PathVariable Long id) {
+        return ResponseEntity.ok(accountService.findAccountById(id));
     }
 
-    // Metdoa GET do pobrania konta po właścicielu
+    // 🔹 GET /accounts/owner/{owner} → pobranie kont po właścicielu
     @GetMapping("/owner/{owner}")
-    public ResponseEntity<List<Account>> findAccountByOwner(@PathVariable String owner) {
-        try {
-            List<Account> foundAccounts = accountService.findAccountsByOwner(owner);
-            return ResponseEntity.ok(foundAccounts);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<List<AccountResponse>> findAccountByOwner(@PathVariable String owner) {
+        return ResponseEntity.ok(accountService.findAccountsByOwner(owner));
     }
 
-    // Metoda GET do pobrania konta z najwyższym saldem
+    // 🔹 GET /accounts/highest-balance → konto z najwyższym saldem
     @GetMapping("/highest-balance")
-    public ResponseEntity<Account> getAccountWithMaxBalance() {
-        try {
-            Account accountWithMaxBalance = accountService.getAccountWithMaxBalanceSpring();
-            return ResponseEntity.ok(accountWithMaxBalance);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<AccountResponse> getAccountWithMaxBalance() {
+        return ResponseEntity.ok(accountService.getAccountWithMaxBalanceSpring());
     }
 
-    // Metoda GET do znajdywania kont o saldzie mniejszym niż podanym z palca
+    // 🔹 GET /accounts/balance/greater-than/{amount} → konta z saldem większym niż podane
     @GetMapping("/balance/greater-than/{amount}")
-    public ResponseEntity<List<Account>> getAccountsWithBalanceGreaterThan(@PathVariable BigDecimal amount) {
-        List<Account> foundAccounts = accountService.getAccountsWithBalanceGreaterThan(amount);
-        return foundAccounts.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(foundAccounts);
+    public ResponseEntity<List<AccountResponse>> getAccountsWithBalanceGreaterThan(@PathVariable BigDecimal amount) {
+        List<AccountResponse> accounts = accountService.getAccountsWithBalanceGreaterThan(amount);
+        return accounts.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(accounts);
     }
 
-    // Metoda GET do znalezienie kont utworzonych po dacie
+    // 🔹 GET /accounts/created-after/{date} → konta utworzone po dacie
     @GetMapping("/created-after/{date}")
-    public ResponseEntity<List<Account>> getAccountsCreatedAfter(@PathVariable LocalDate date) {
-        List<Account> foundAccounts = accountService.getAccountsCreatedAfterDate(date);
-        return foundAccounts.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(foundAccounts);
+    public ResponseEntity<List<AccountResponse>> getAccountsCreatedAfter(@PathVariable LocalDate date) {
+        List<AccountResponse> accounts = accountService.getAccountsCreatedAfterDate(date);
+        return accounts.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(accounts);
     }
 
-    // Metoda GET do znalezienia pierwsze konto (najstarsze) po dacie utworzenia (createdAt)
+    // 🔹 GET /accounts/oldest → najstarsze konto
     @GetMapping("/oldest")
-    public ResponseEntity<Account> getTheOldestAccount() {
-        try {
-            Account account = accountService.getTheOldestAccount();
-            return ResponseEntity.ok(account);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<AccountResponse> getTheOldestAccount() {
+        return ResponseEntity.ok(accountService.getTheOldestAccount());
     }
 
-    // Metoda GET do policzenia, ile jest kont w danej walucie (currency)
+    // 🔹 GET /accounts/with-currency/{currency} → liczba kont w danej walucie
     @GetMapping("/with-currency/{currency}")
     public ResponseEntity<Long> getHowManyAccountWithCurrency(@PathVariable String currency) {
-        Long accounts = accountService.getHowManyAccountWithCurrency(currency);
-        return ResponseEntity.ok(accounts);
+        return ResponseEntity.ok(accountService.getHowManyAccountWithCurrency(currency));
     }
 
-    // Metoda GET do znalezienia pierwszego konta, które ma status „ACTIVE”, posortowane malejąco po saldzie
+    // 🔹 GET /accounts/with-status/{status} → pierwsze aktywne konto według salda
     @GetMapping("/with-status/{status}")
-    public ResponseEntity<Account> getFirstActiveAccountOrderByBalanceDesc(@PathVariable String status) {
-        try {
-            Account account = accountService.firstActiveAccountOrderByBalanceDesc(status);
-            return ResponseEntity.ok(account);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<AccountResponse> getFirstActiveAccountOrderByBalanceDesc(@PathVariable String status) {
+        return ResponseEntity.ok(accountService.firstActiveAccountOrderByBalanceDesc(status));
     }
 
-    // Metoda GET do znajdywania wszystkich kont utworzone przed datą
+    // 🔹 GET /accounts/created-before/{date} → konta utworzone przed datą
     @GetMapping("/created-before/{date}")
-    public ResponseEntity<List<Account>> getAccountsCreatedBefore(@PathVariable LocalDate date) {
-        List<Account> foundAccounts = accountService.accountsCreatedBefore(date);
-        return foundAccounts.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(foundAccounts);
+    public ResponseEntity<List<AccountResponse>> getAccountsCreatedBefore(@PathVariable LocalDate date) {
+        List<AccountResponse> accounts = accountService.accountsCreatedBefore(date);
+        return accounts.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(accounts);
     }
 
-    // Metoda GET znajdź konto o najwyższym saldzie w danej walucie
+    // 🔹 GET /accounts/highest-balance/{currency} → konto z najwyższym saldem w danej walucie
     @GetMapping("/highest-balance/{currency}")
-    public ResponseEntity<Account> getAccountWithHighestBalanceIn(@PathVariable String currency) {
-        try {
-            Account account = accountService.accountWithHighestBalanceIn(currency);
-            return ResponseEntity.ok(account);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<AccountResponse> getAccountWithHighestBalanceIn(@PathVariable String currency) {
+        return ResponseEntity.ok(accountService.accountWithHighestBalanceIn(currency));
     }
 
-    // Metoda GET do znajdywania 3 kont z najwzyśzym saldem
+    // 🔹 GET /accounts/balance-top3 → top 3 kont z najwyższym saldem
     @GetMapping("/balance-top3")
-    public ResponseEntity<List<Account>> getTop3HighestBalanceAccounts() {
-        List<Account> accounts = accountService.top3HighestBalanceAccounts();
-        return accounts.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(accounts);
+    public ResponseEntity<List<AccountResponse>> getTop3HighestBalanceAccounts() {
+        List<AccountResponse> accounts = accountService.top3HighestBalanceAccounts();
+        return accounts.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(accounts);
     }
 
+    // 🔹 POST /accounts/transfer → wykonanie przelewu
+    @PostMapping("/transfer")
+    public ResponseEntity<String> transfer(@RequestBody @Valid TransferRequest request) {
+        accountService.transfer(request.getSenderId(), request.getReceiverId(), request.getAmount());
+        return ResponseEntity.ok("Transfer completed");
+    }
 
+    // POST /accounts/{id}/deposit
+    @PostMapping("/{id}/deposit")
+    public ResponseEntity<AccountResponse> deposit(
+            @PathVariable Long id,
+            @RequestParam BigDecimal amount) {
+        return ResponseEntity.ok(accountService.deposit(id, amount));
+    }
 
+    // POST /accounts/{id}/withdraw
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<AccountResponse> withdraw(
+            @PathVariable Long id,
+            @RequestParam BigDecimal amount) {
+        return ResponseEntity.ok(accountService.withdraw(id, amount));
+    }
 
-
-
-
-    // Później można dodać np.:
-    // - GET /accounts/{id} → konto po ID
-    // - PUT /accounts/{id} → aktualizacja konta
-    // - DELETE /accounts/{id} → usunięcie konta
 }
-

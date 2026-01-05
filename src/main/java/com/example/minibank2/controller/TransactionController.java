@@ -1,21 +1,18 @@
 package com.example.minibank2.controller;
 
+import com.example.minibank2.dto.TransactionResponse;
 import com.example.minibank2.dto.TransferRequest;
 import com.example.minibank2.dto.TransferResponse;
-import com.example.minibank2.entity.Transaction;
 import com.example.minibank2.entity.TransactionType;
 import com.example.minibank2.service.AccountService;
 import com.example.minibank2.service.TransactionService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/transactions")
@@ -29,79 +26,68 @@ public class TransactionController {
         this.accountService = accountService;
     }
 
-    // GET /transactions → zwraca wszystkie transakcje danego konta
+    // 🔹 GET /transactions → zwraca wszystkie transakcje danego konta
     @GetMapping("/{accountId}")
-    public ResponseEntity<List<Transaction>> getTransactionsForAccount(@PathVariable Long accountId) {
-            List<Transaction> transactions = transactionService.getTransactionsForAccount(accountId);
-            return transactions.isEmpty()
-                    ? ResponseEntity.noContent().build()
-                    : ResponseEntity.ok(transactions);
+    public ResponseEntity<List<TransactionResponse>> getTransactionsForAccount(@PathVariable Long accountId) {
+        return ResponseEntity.ok(transactionService.getTransactionsForAccount(accountId));
     }
 
-    // GET - Pobranie transakcji z zakresu dat
+    // 🔹 GET - Pobranie transakcji z zakresu dat
     @GetMapping("/{accountId}/between")
-    public ResponseEntity<List<Transaction>> getTransactionsBetweenDates(
+    public ResponseEntity<List<TransactionResponse>> getTransactionsBetweenDates(
             @PathVariable Long accountId,
             @RequestParam LocalDateTime from,
             @RequestParam LocalDateTime to) {
-
-        List<Transaction> transactions = transactionService.getTransactionsBetweenDates(accountId, from, to);
-        return transactions.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(transactions);
+        return ResponseEntity.ok(transactionService.getTransactionsBetweenDates(accountId, from, to));
     }
 
-    // GET - Pobranie tylko transakcji typu DEPOSIT / WITHDRAW
+    // 🔹 GET - Pobranie tylko transakcji typu DEPOSIT / WITHDRAW
     @GetMapping("/{accountId}/type")
-    public ResponseEntity<List<Transaction>> getTransactionsType(@PathVariable Long accountId, @RequestParam TransactionType type) {
-        List<Transaction> transactions = transactionService.getTransactionsForAccountByType(accountId, type);
-        return transactions.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(transactions);
+    public ResponseEntity<List<TransactionResponse>> getTransactionsType(
+            @PathVariable Long accountId,
+            @RequestParam TransactionType type) {
+        return ResponseEntity.ok(transactionService.getTransactionsForAccountByType(accountId, type));
     }
 
-    // GET - Pobranie sumy transakcji z danego dnia
+    // 🔹 GET - Pobranie sumy transakcji z danego dnia
     @GetMapping("/{accountId}/transactions/sum")
-    public ResponseEntity<BigDecimal> getTransactionSumForDate(@PathVariable Long accountId, @RequestParam LocalDateTime date) {
-        BigDecimal sum = transactionService.getTransactionSumForDate(accountId, date);
-        return ResponseEntity.ok(sum);
+    public ResponseEntity<BigDecimal> getTransactionSumForDate(
+            @PathVariable Long accountId,
+            @RequestParam LocalDateTime date) {
+        return ResponseEntity.ok(transactionService.getTransactionSumForDate(accountId, date));
     }
 
-    // GET - Pobranie liczby transakcji na koncie
+    // 🔹 GET - Pobranie liczby transakcji na koncie
     @GetMapping("/{accountId}/count")
     public ResponseEntity<Long> getTransactionCount(@PathVariable Long accountId) {
-        Long count = transactionService.getTransactionCount(accountId);
-        return ResponseEntity.ok(count);
+        return ResponseEntity.ok(transactionService.getTransactionCount(accountId));
     }
 
-    // GET - Pobranie ostatnich N transakcji
+    // 🔹 GET - Pobranie ostatnich N transakcji
     @GetMapping("/{accountId}/last")
-    public ResponseEntity<List<Transaction>> getNTransactions(@PathVariable Long accountId, @RequestParam Integer limit) {
-        List<Transaction> transactions = transactionService.getLastNTransactions(accountId, limit);
-        return transactions.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(transactions);
+    public ResponseEntity<List<TransactionResponse>> getNTransactions(
+            @PathVariable Long accountId,
+            @RequestParam Integer limit) {
+        return ResponseEntity.ok(transactionService.getLastNTransactions(accountId, limit));
     }
 
-    // GET - Pobranie największej transakcji (deposit/withdraw)
+    // 🔹 GET - Pobranie największej transakcji (deposit/withdraw)
     @GetMapping("/{accountId}/max")
-    public ResponseEntity<Transaction> getMaxTransactionsByType(@PathVariable Long accountId, @RequestParam TransactionType type) {
-        Transaction transaction = transactionService.getMaxTransactionsByType(accountId, type);
-        return transaction != null
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(transaction);
+    public ResponseEntity<TransactionResponse> getMaxTransactionsByType(
+            @PathVariable Long accountId,
+            @RequestParam TransactionType type) {
+        return ResponseEntity.ok(transactionService.getMaxTransactionsByType(accountId, type));
     }
 
-    // GET - Pobranie transakcji powyżej określonej kwoty
+    // 🔹 GET - Pobranie transakcji powyżej określonej kwoty
     @GetMapping("/{accountId}/above")
-    public ResponseEntity<List<Transaction>> getTransactionsAboveAmount(@PathVariable Long accountId, @RequestParam BigDecimal amount) {
-        List<Transaction> transactions = transactionService.getTransactionsAboveAmount(accountId, amount);
-        return transactions.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(transactions);
+    public ResponseEntity<List<TransactionResponse>> getTransactionsAboveAmount(
+            @PathVariable Long accountId,
+            @RequestParam BigDecimal amount) {
+        return ResponseEntity.ok(transactionService.getTransactionsAboveAmount(accountId, amount));
     }
 
-    // POST - wykonannie transakcji przy pomocy klasy DTO
+    // 🔹 POST - wykonanie transakcji przy pomocy klasy DTO
     @PostMapping("/transfer")
     public ResponseEntity<TransferResponse> transfer(@Valid @RequestBody TransferRequest request) {
         accountService.transfer(request.getSenderId(), request.getReceiverId(), request.getAmount());

@@ -11,7 +11,7 @@ public class TransferRequest {
     private Long senderId;
     @NotNull(message = "Receiver ID cannot be null")
     private Long receiverId;
-    @DecimalMin(value = "1.00", message = "Amount must be at least 1.00")
+    @DecimalMin(value = "0.01", message = "Amount must be at least 0.01")
     private BigDecimal amount;
 
     public TransferRequest() {}

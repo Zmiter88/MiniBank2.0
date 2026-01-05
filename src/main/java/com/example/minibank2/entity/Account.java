@@ -1,5 +1,7 @@
 package com.example.minibank2.entity;
 
+import com.example.minibank2.exception.InsufficientFundsException;
+import com.example.minibank2.exception.InvalidAmountException;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,7 +26,9 @@ public class Account {
     private String status;      // status konta, np. "ACTIVE" lub "BLOCKED"
 
     // nowe pola do testowania dodatkowych funkcji
-    private String accountType;      // typ konta, np. "SAVINGS" lub "CHECKING"
+    @Enumerated(EnumType.STRING)
+    private AccountType accountType;     // typ konta, np. "SAVINGS" lub "CHECKING"
+
     private BigDecimal interestRate; // oprocentowanie konta
 
     // Domyślny konstruktor wymagany przez JPA
@@ -32,7 +36,7 @@ public class Account {
 
     // Konstruktor pełny
     public Account(String owner, String number, String currency, BigDecimal balance,
-                   String status, String accountType, BigDecimal interestRate) {
+                   String status, AccountType accountType, BigDecimal interestRate) {
         this.owner = owner;
         this.number = number;
         this.currency = currency;
@@ -62,8 +66,13 @@ public class Account {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public String getAccountType() { return accountType; }
-    public void setAccountType(String accountType) { this.accountType = accountType; }
+    public AccountType getAccountType() {
+        return accountType;
+    }
+
+    public void setAccountType(AccountType accountType) {
+        this.accountType = accountType;
+    }
 
     public BigDecimal getInterestRate() { return interestRate; }
     public void setInterestRate(BigDecimal interestRate) { this.interestRate = interestRate; }
@@ -75,5 +84,24 @@ public class Account {
     public void setCreatedAt(LocalDate createdAt) {
         this.createdAt = createdAt;
     }
+
+    // metody wpłaty i wypłaty środków z konta wraz z walidacją
+    public void withdraw(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidAmountException("Kwota musi być większa od 0");
+        }
+        if (this.balance.compareTo(amount) < 0) {
+            throw new InsufficientFundsException("Brak wystarczających środków na koncie");
+        }
+        this.balance = this.balance.subtract(amount);
+    }
+
+    public void deposit(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidAmountException("Kwota musi być większa od 0");
+        }
+        this.balance = this.balance.add(amount);
+    }
+
 }
 
