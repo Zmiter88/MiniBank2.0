@@ -1,6 +1,6 @@
 package com.example.minibank2.integration;
 
-import com.example.minibank2.model.Account;
+import com.example.minibank2.entity.Account;
 import com.example.minibank2.repository.AccountRepository;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;

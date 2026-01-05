@@ -1,6 +1,6 @@
 package com.example.minibank2.repository;
 
-import com.example.minibank2.model.Account;
+import com.example.minibank2.entity.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -24,7 +24,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     List<Account> findByOwner(String owner);
     Optional<Account> findTopByOrderByBalanceDesc();  // metoda do znalezienia konta z najwyższym saldem
-    List<Account> findByBalanceGreaterThan(BigDecimal amount); // metoda do znajdywania konta o saldzie większym niż podanym z palca
+    List<Account> findByBalanceGreaterThan(BigDecimal amount); // metoda do znajdywania kont o saldzie większym niż podanym z palca
     List<Account> findByCreatedAtAfter(LocalDate date); // znalezienie konta utworzonego po dacie
     Optional<Account> findTopByOrderByCreatedAtAsc(); // pierwsze konto (najstarsze) po dacie utworzenia (createdAt).
     Long countByCurrency(String currency); // Policz, ile jest kont w danej walucie (currency).
