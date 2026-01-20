@@ -3,6 +3,8 @@ package com.example.minibank2.controller;
 import com.example.minibank2.dto.*;
 import com.example.minibank2.service.AccountService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -142,5 +144,41 @@ public class AccountController {
             @RequestParam BigDecimal amount) {
         return ResponseEntity.ok(accountService.withdraw(id, amount));
     }
+
+    // ENDPOINTY Z PAGINACJĄ:
+
+
+    @GetMapping("/paged")
+    public ResponseEntity<Page<AccountResponse>> getAccountsPaged(Pageable pageable) {
+        return ResponseEntity.ok(accountService.getAccounts(pageable));
+    }
+
+    // konta z saldem większym niż podane
+    @GetMapping("/balance/greater-than/{amount}/paged")
+    public ResponseEntity<Page<AccountResponse>> getAccountsWithBalanceGreaterThanPaged(
+            @PathVariable BigDecimal amount,
+            Pageable pageable) {
+
+        Page<AccountResponse> page =
+                accountService.getAccountsWithBalanceGreaterThan(amount, pageable);
+
+        return page.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(page);
+    }
+
+    // konta utworzone po dacie
+    @GetMapping("/created-after/{date}/paged")
+    public ResponseEntity<Page<AccountResponse>> getAccountsCreatedAfter(@PathVariable LocalDate date, Pageable pageable) {
+        Page<AccountResponse> page = accountService.getAccountsCreatedAfterDate(date, pageable);
+        return page.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(page);
+    }
+
+    // pobranie kont po właścicielu
+    @GetMapping("/owner/{owner}/paged")
+    public ResponseEntity<Page<AccountResponse>> findAccountByOwner(@PathVariable String owner, Pageable pageable) {
+        return ResponseEntity.ok(accountService.findAccountsByOwner(owner, pageable));
+    }
+
 
 }

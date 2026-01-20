@@ -1,8 +1,11 @@
 package com.example.minibank2.repository;
 
 import com.example.minibank2.entity.Account;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,6 +35,10 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     List<Account> findAllByCreatedAtBefore(LocalDate date); // Znajdź wszystkie konta utworzone przed
     Optional<Account> findTopByCurrencyOrderByBalanceDesc(String currency); // Znajdź konto o najwyższym saldzie w danej walucie
     List<Account> findTop3ByOrderByBalanceDesc(); // 3 konta z najwyższym saldem
+    Page<Account> findByBalanceGreaterThan(BigDecimal amount, Pageable pageable);
+    Page<Account> findByCreatedAtAfter(LocalDate date, Pageable pageable);
+    Page<Account> findByOwner(String owner, Pageable pageable);
+
 
 
 }
