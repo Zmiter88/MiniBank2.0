@@ -15,6 +15,8 @@ import com.example.minibank2.repository.AccountRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -210,4 +212,41 @@ public class AccountService {
         transactionService.recordWithdraw(account, amount);
         return accountMapper.toAccountResponse(account);
     }
+
+    // METODY Z PAGINACJĄ
+    public Page<AccountResponse> getAccounts(Pageable pageable) {
+        return accountRepository.findAll(pageable)
+                .map(accountMapper::toAccountResponse);
+    }
+
+    // konta z saldem większym niż podane
+    public Page<AccountResponse> getAccountsWithBalanceGreaterThan(
+            BigDecimal amount,
+            Pageable pageable) {
+
+        Page<Account> page =
+                accountRepository.findByBalanceGreaterThan(amount, pageable);
+
+        return page.map(accountMapper::toAccountResponse);
+    }
+
+    // Znalezienie kont utworzonych po dacie
+    public Page<AccountResponse> getAccountsCreatedAfterDate(LocalDate date, Pageable pageable) {
+        Page<Account> page = accountRepository.findByCreatedAtAfter(date, pageable);
+        if (page.isEmpty()) {
+            throw new AccountNotFoundException("No accounts found after " + date);
+        }
+        return page.map(accountMapper::toAccountResponse);
+    }
+
+    // pobranie kont po właścicielu
+    public Page<AccountResponse> findAccountsByOwner(String owner, Pageable pageable) {
+        Page<Account> accounts = accountRepository.findByOwner(owner, pageable);
+        if (accounts.isEmpty()) {
+            throw new AccountNotFoundException("No accounts for owner: " + owner);
+        }
+        return accounts.map(accountMapper::toAccountResponse);
+    }
+
+
 }

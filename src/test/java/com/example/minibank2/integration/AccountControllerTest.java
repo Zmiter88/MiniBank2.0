@@ -1,6 +1,7 @@
 package com.example.minibank2.integration;
 
 import com.example.minibank2.entity.Account;
+import com.example.minibank2.entity.AccountType;
 import com.example.minibank2.repository.AccountRepository;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,7 +79,7 @@ public class AccountControllerTest {
     public void testUpdateAccount() {
         // 1. Tworzymy konto testowe
         Account account = new Account("Alicja", "235256436", "PLN",
-                new BigDecimal("9999.00"), "ACTIVE", "SAVINGS", new BigDecimal("0.05"));
+                new BigDecimal("9999.00"), "ACTIVE", AccountType.SAVINGS, new BigDecimal("0.05"));
         account = accountRepository.save(account);
 
         // 2. Dane do aktualizacji
