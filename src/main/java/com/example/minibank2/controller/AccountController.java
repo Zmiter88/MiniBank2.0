@@ -180,5 +180,12 @@ public class AccountController {
         return ResponseEntity.ok(accountService.findAccountsByOwner(owner, pageable));
     }
 
+    // top 3 po balance
+    @GetMapping("/balance-top3/paged")
+    public ResponseEntity<Page<AccountResponse>> getTop3HighestBalanceAccounts(Pageable pageable) {
+        Page<AccountResponse> accounts = accountService.top3HighestBalanceAccounts(pageable);
+        return accounts.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(accounts);
+    }
+
 
 }

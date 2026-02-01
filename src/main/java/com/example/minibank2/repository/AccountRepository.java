@@ -38,6 +38,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Page<Account> findByBalanceGreaterThan(BigDecimal amount, Pageable pageable);
     Page<Account> findByCreatedAtAfter(LocalDate date, Pageable pageable);
     Page<Account> findByOwner(String owner, Pageable pageable);
+    Page<Account> findTop3ByOrderByBalanceDesc(Pageable pageable);
 
 
 

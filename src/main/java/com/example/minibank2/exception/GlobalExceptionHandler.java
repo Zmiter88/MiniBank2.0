@@ -53,6 +53,14 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(errors, HttpStatus.BAD_REQUEST.value()));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity
+                .badRequest()
+                .body(new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value()));
+    }
+
+
     // Ogólny handler dla nieprzewidzianych wyjątków
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAll(Exception ex) {
