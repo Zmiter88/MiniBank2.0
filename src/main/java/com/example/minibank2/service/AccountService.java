@@ -248,5 +248,14 @@ public class AccountService {
         return accounts.map(accountMapper::toAccountResponse);
     }
 
+    // 🔹 Top 3 kont z najwyższym saldem
+    public Page<AccountResponse> top3HighestBalanceAccounts(Pageable pageable) {
+        Page<Account> accounts = accountRepository.findTop3ByOrderByBalanceDesc(pageable);
+        if (accounts.isEmpty()) {
+            throw new AccountNotFoundException("No accounts found in database");
+        }
+        return accounts.map(accountMapper::toAccountResponse);
+    }
+
 
 }
